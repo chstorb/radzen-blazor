@@ -1,29 +1,76 @@
 ﻿@inject ContextMenuService ContextMenuService
+@inject DialogService DialogService
 
 <RadzenStack Gap="1rem" Class="rz-p-sm-12">
-    <RadzenButton Text="Right click me" ContextMenu=@(args => ShowContextMenuWithItems(args)) ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large" />
+    <RadzenButton Text="Right click me" ContextMenu=@(args => ShowContextMenuWithItems(args, data.FirstOrDefault())) ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large" />
     <EventConsole @ref=@console />
 </RadzenStack>
 
 @code {
     EventConsole console;
 
-    void ShowContextMenuWithItems(MouseEventArgs args)
+    class SampleData
     {
-        ContextMenuService.Open(args,
-            new List<ContextMenuItem> {
-                new ContextMenuItem(){ Text = "Context menu item 1", Value = 1, Icon = "home" },
-                new ContextMenuItem(){ Text = "Context menu item 2", Value = 2, Icon = "search" },
-                new ContextMenuItem(){ Text = "Context menu item 3", Value = 3, Icon = "info" },
-         }, OnMenuItemClick);
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public bool IsSpecial { get; set; }
     }
 
-    void OnMenuItemClick(MenuItemEventArgs args)
+    IEnumerable<SampleData> data = new List<SampleData> 
+    { 
+        new SampleData { Id = 1, Title = "Data Item 1", IsSpecial = true }, 
+        new SampleData { Id = 2, Title = "Data Item 2", IsSpecial = false } 
+    };
+
+    void ShowContextMenuWithItems(MouseEventArgs args, SampleData dataItem)
     {
-        console.Log($"Menu item with Value={args.Value} clicked");
-        if(!args.Value.Equals(3) && !args.Value.Equals(4))
+        //ContextMenuService.Open(args,
+        //    new List<ContextMenuItem> {
+        //        new ContextMenuItem(){ Text = "Context menu item 1", Value = 1, Icon = "home" },
+        //        new ContextMenuItem(){ Text = "Context menu item 2", Value = 2, Icon = "search" },
+        //        new ContextMenuItem(){ Text = "Context menu item 3", Value = 3, Icon = "info" },
+        // }, OnMenuItemClick);
+
+        var items = new List<ContextMenuItem>();
+
+        ContextMenuService.OpenContextMenu(args, 
+            new List<ContextMenuItem>
+            {
+                new ContextMenuItem() { Text = "Delete", /*Disabled = dataItem.IsSpecial, */ Icon = "delete", Value = EventCallback.Factory.Create<MenuItemEventArgs>(this, () => OnMenuItemDeleteClickAsync(dataItem)) }, 
+                new ContextMenuItem() { Text = "Report", Icon = "bug_report", Value = EventCallback.Factory.Create<MenuItemEventArgs>(this, () => OnMenuItemReportClickAsync(dataItem)) }
+            });
+    }
+
+    //void OnMenuItemClick(MenuItemEventArgs args)
+    //{
+    //    console.Log($"Menu item with Value={args.Value} clicked");
+    //    if(!args.Value.Equals(3) && !args.Value.Equals(4))
+    //    {
+    //        ContextMenuService.Close();
+    //    }
+    //}
+
+    async Task OnMenuItemDeleteClickAsync(SampleData dataItem)
+    {
+        bool confirmed = await DialogService.Confirm($"Delete '{dataItem.Title}'?", "Delete Data Item", new ConfirmOptions() { OkButtonText = "Yes", CancelButtonText = "No" }) ?? false;
+        ContextMenuService.Close();
+        if (!confirmed)
         {
-            ContextMenuService.Close();
+            return;
         }
+        
+        // TODO: Delete 
+    }
+
+    async Task OnMenuItemReportClickAsync(SampleData dataItem)
+    {
+        bool confirmed = await DialogService.Confirm($"Report '{dataItem.Title}'?", "Report Data Item", new ConfirmOptions() { OkButtonText = "Yes", CancelButtonText = "No" }) ?? false;
+        ContextMenuService.Close();
+        if (!confirmed)
+        {
+            return;
+        }
+
+        // TODO: Report
     }
 }
